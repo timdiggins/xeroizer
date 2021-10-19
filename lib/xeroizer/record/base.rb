@@ -121,7 +121,7 @@ module Xeroizer
           end
 
           saved!
-        rescue ApiException => e
+        rescue XeroizerError => e
           valid? # we are calling this to populate with known errors, but also set up @errors object
           e.validation_errors.each do |error|
             errors << [:base, error]

@@ -118,7 +118,8 @@ class RecordBaseTest < Test::Unit::TestCase
   context 'saving' do
     context 'invalid record' do
       setup do
-        @contact.stubs(:valid?).returns(false)
+        @contact.valid? # we need to actually call valid? in order to exercise it for its side effects
+        @contact.stubs(:valid?).returns(false) # maybe we should avoid stubbing the object under test?
       end
 
       must 'raise an exception saving with #save!' do
@@ -132,7 +133,7 @@ class RecordBaseTest < Test::Unit::TestCase
       end
     end
 
-    context 'api error received' do
+    context 'ApiExeption received' do
       setup do
         response = get_file_as_string('api_exception.xml')
 
@@ -187,6 +188,56 @@ class RecordBaseTest < Test::Unit::TestCase
           @contact.save!
         end
         assert_equal([[:base, "Users Organisation is not subscribed to currency NZD"]], @contact.errors)
+      end
+    end
+
+    context 'other error received' do
+      setup do
+        exception = Xeroizer::XeroizerError.new("Unexpected error given by Xero ")
+        @contact.stubs(:create).raises(exception)
+        @contact.stubs(:update).raises(exception)
+      end
+
+      must 'raise an exception creating records with #save!' do
+        @contact.stubs(:new_record?).returns(true)
+        assert_raise(Xeroizer::XeroizerError) do
+          @contact.save!
+        end
+      end
+
+      must 'raise an exception updating records with #save!' do
+        @contact.stubs(:new_record?).returns(false)
+        assert_raise(Xeroizer::XeroizerError) do
+          @contact.save!
+        end
+      end
+
+      must 'return false creating records with #save' do
+        @contact.stubs(:new_record?).returns(true)
+        assert_equal(false, @contact.save)
+      end
+
+      must 'return false updating records with #save' do
+        @contact.stubs(:new_record?).returns(false)
+        assert_equal(false, @contact.save)
+      end
+
+      must 'set errors creating records with #save' do
+        @contact.stubs(:new_record?).returns(true)
+        @contact.save
+        assert_equal(1, @contact.errors.length)
+        assert_equal(:base, @contact.errors[0].first)
+        assert_match(/Unexpected error given by Xero/, @contact.errors[0].second)
+      end
+
+      must 'set errors updating records with #save!' do
+        @contact.stubs(:new_record?).returns(false)
+        assert_raise(Xeroizer::XeroizerError) do
+          @contact.save!
+        end
+        assert_equal(1, @contact.errors.length)
+        assert_equal(:base, @contact.errors[0].first)
+        assert_match(/Unexpected error given by Xero/, @contact.errors[0].second)
       end
     end
   end

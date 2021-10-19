@@ -13,9 +13,13 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 module Xeroizer
-  
-  class XeroizerError < StandardError; end
-  
+
+  class XeroizerError < StandardError
+    def validation_errors
+      [message]
+    end
+  end
+
   class ApiException < XeroizerError
     
     attr_reader :type, :message, :xml, :parsed_xml, :request_body
@@ -39,7 +43,7 @@ module Xeroizer
       end
       errors
     rescue
-      []
+      [message]
     end
     
   end
